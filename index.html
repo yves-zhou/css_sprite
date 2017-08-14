@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>雪碧图合成</title>
+</head>
+<body>
+<p>点击选择要合成的图片</p>
+<input type="file" id="files" multiple="true"><br>
+<p>这里存放雪碧图的样式</p>
+<code id="cssContainer"></code>
+<p>鼠标移动到图片上右击 ——> 图片另存为</p>
+<canvas id="canvas"></canvas>
+
+<script>
+    var canvas = document.getElementById('canvas');
+    var context = canvas.getContext('2d');
+    var cssContainer = document.getElementById('cssContainer');
+
+    var fileToImg = (function(){
+        var reader = new FileReader();
+        return function(file){
+            return new Promise((resolve, reject) => {
+                reader.onload = function(e){
+                    resolve(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            })
+        }
+    })();
+
+    var imgsPutCanvas = function(maxWidth, height_total, imgPos){
+        canvas.width = maxWidth;
+        canvas.height = height_total;
+
+        for(var i = 0; i < imgs.length; i++){
+            context.drawImage(imgs[i], 0, imgPos[i]);
+        }
+    };
+
+    var imgs;
+    var filesToImgs = function(filesArr){
+        if(filesArr.length == 0){
+            return;
+        }
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        var index = 0;
+        var len = filesArr.length;
+        var maxWidth = 0;
+        var height_total = 0;
+        var imgPos = [];
+        var cssText = '';
+        imgs = [];
+        var loop = function(file){
+            if(file.type === "image/png"){
+               fileToImg(file).then(function(result){
+                    var img = new Image();
+                    img.src = result;
+                    img.onload = function(){
+                        maxWidth = img.width > maxWidth ? img.width : maxWidth;
+                        imgPos.push(height_total);
+                        cssText += `{ width:${img.width}px;height:${img.height}px;background-position:0 -${height_total}px; }  `;
+                        height_total += img.height;
+
+                        imgs.push(this);
+                        index++;
+                        if(index < len){
+                            loop(filesArr[index])
+                        }else{
+                            cssContainer.innerHTML = cssText;
+                            imgsPutCanvas(maxWidth, height_total, imgPos);
+                        }
+                    };
+                });
+            }else{
+                index++;
+                if(index < len){
+                    loop(filesArr[index])
+                }else{
+                    cssContainer.innerHTML = cssText;
+                    imgsPutCanvas(maxWidth, height_total, imgPos);
+                }
+            }
+
+        }
+        loop(filesArr[index]);
+    };
+
+    var files = document.getElementById('files');
+    files.addEventListener('change', function(event){
+        filesToImgs(Array.from(event.target.files));
+    });
+
+
+</script>
+</body>
+</html>
